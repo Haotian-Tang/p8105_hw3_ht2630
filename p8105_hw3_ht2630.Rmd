@@ -1,0 +1,14 @@
+---
+title: "p8105_hw3_ht2630"
+author: "Haotian Tang"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r}
+
+library(p8105.datasets)
+data("brfss_smart2010")
+
+```
+
