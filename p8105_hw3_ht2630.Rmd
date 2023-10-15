@@ -10,7 +10,6 @@ output: github_document
 Problem 2
 
 ```{r}
-
 library(tidyverse)
 library(dplyr)
 library(ggridges)
@@ -22,14 +21,16 @@ data("brfss_smart2010")
 health_df = brfss_smart2010
 
 colnames(health_df) = c("Year", "Location_Abbreviation", "Location_Description", "Class", "Topic", "Health_Question", "Response", "Sample_Size", "Data_value", "Confidence_Limit_Low", "Confidence_Limit_High", "Display_Order", "Data_Value_Unit", "Data_Value_Type", "Data_Value_Footnote_Symbol", "Data_Value_Footnote", "Data_Source", "Class_ID", "Topic_ID", "Location_ID", "Question_ID", "RESP_ID", "Geographic_Location")
-
+  
 health_df = subset(health_df, Topic == "Overall Health" & Response %in% c("Poor", "Fair", "Good", "Very good", "Excellent"))
 
 filtered_health_df = health_df |>
-  filter(Topic == "Overall Health") |> 
-  filter(Response %in% c("Poor", "Fair", "Good", "Very good", "Excellent")) |> 
-  mutate(Response = as.factor(Response), Response = ordered(Response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent")), ordered = TRUE) 
+  filter(Topic == "Overall Health", Response %in% c("Poor", "Fair", "Good", "Very good", "Excellent")) |>
+  mutate(Response = factor(Response, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"), ordered = TRUE))
+```
 
+
+```{r}
 Year_2002 = subset(health_df, Year == 2002) |> 
   group_by(Location_Abbreviation) |> 
   summarise(n_occurrences = n()) |> 
