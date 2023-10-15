@@ -22,9 +22,10 @@ health_df = brfss_smart2010
 
 colnames(health_df) = c("Year", "Location_Abbreviation", "Location_Description", "Class", "Topic", "Health_Question", "Response", "Sample_Size", "Data_value", "Confidence_Limit_Low", "Confidence_Limit_High", "Display_Order", "Data_Value_Unit", "Data_Value_Type", "Data_Value_Footnote_Symbol", "Data_Value_Footnote", "Data_Source", "Class_ID", "Topic_ID", "Location_ID", "Question_ID", "RESP_ID", "Geographic_Location") 
   
-  health_df = subset(health_df, Topic == "Overall Health" & Response %in% c("Excellent", "Very Good", "Good", "Fair", "Poor")) |> 
+  health_df = subset(health_df, Topic == "Overall Health" & Response %in% c("Poor", "Fair", "Good", "Very Good", "Excellent")) |> 
 
-  mutate(Response = factor(Response, levels = c("Poor", "Fair", "Good", "Very Good", "Excellent"), ordered = TRUE))
+  mutate(Response = factor(Response)) |>
+  mutate(Response = fct_relevel(Response, c("Poor", "Fair", "Good", "Very Good", "Excellent")))
   
 Year_2002 = subset(health_df, Year == 2002) |> 
   group_by(Location_Abbreviation) |> 
@@ -68,5 +69,57 @@ ggplot(NY_health_df, aes(x = Data_value, fill = Response)) +
 
 ---
 Problem 3
+```{r}
+
+nhanes_covar = read_csv("nhanes_covar.csv", skip = 4) |> 
+ 
+  mutate(sex = recode(sex, '1' = 'Male', '2' = 'Female')) |> 
+  mutate(education = recode(education, '1' = 'Less than high school', '2' = 'High school equivalent', '3' = 'More than high school')) |>
+  drop_na(sex, age, BMI, education) |>
+  filter(age >= 21)
+
+nhanes_accel = read_csv("nhanes_accel.csv") 
+
+Merged_data = merge(nhanes_covar, nhanes_accel, by = "SEQN")|>
+  
+  mutate(
+    education = fct_relevel(education, c("Less than high school", "High school equivalent", "More than high school"))
+  )
+  
+  ggplot(Merged_data, aes(x = age, fill = sex)) + 
+  geom_histogram(alpha = 0.5, position = 'identity', bins = 30) +
+  facet_grid(~ education) +
+  labs(title = "Age Distribution by Gender and Education",
+       x = "Age",
+       y = "Frequency") +
+  scale_fill_manual(values = c("Male" = "yellow", "Female" = "red"))
+
+
+Gender_education_table = Merged_data |> 
+  group_by(sex, education) |> 
+  summarise(count = n()) |>
+  spread(key = sex, value = count, fill = 0)
+
+```
+Comment: 
+Males and females have close values in the education of being less than high school and more than high school, but there are more males in high school equivalent, about `r Gender_education_table[2,3]` while the number of females is `r Gender_education_table[2,2]`.
+
+From the graph, we can see males and females have similar numbers of being less than high school and high school equivalent at all ages. The nuance is that there are slightly more females of older ages. However, females are more than males with education more than high school in all ages, specifically in younger ages. 
+
+```{r}
+Merged_data = Merged_data |> 
+  mutate(total_activity = rowSums(select(Merged_data, starts_with("min"))))  
+
+  ggplot(Merged_data, aes(x = age, y = total_activity, color = sex)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ education, scales = "free") +
+  labs(
+    title = "Total Activity vs. Age Stratified by Gender and Education Level",
+    x = "Age",
+    y = "Total Activity",
+    color = "Gender"
+  ) 
+```
 
 
