@@ -12,6 +12,7 @@ Problem 2
 ```{r}
 
 library(tidyverse)
+library(dplyr)
 library(ggridges)
 library(patchwork)
 library(p8105.datasets)
@@ -20,13 +21,15 @@ data("brfss_smart2010")
 
 health_df = brfss_smart2010
 
-colnames(health_df) = c("Year", "Location_Abbreviation", "Location_Description", "Class", "Topic", "Health_Question", "Response", "Sample_Size", "Data_value", "Confidence_Limit_Low", "Confidence_Limit_High", "Display_Order", "Data_Value_Unit", "Data_Value_Type", "Data_Value_Footnote_Symbol", "Data_Value_Footnote", "Data_Source", "Class_ID", "Topic_ID", "Location_ID", "Question_ID", "RESP_ID", "Geographic_Location") 
-  
-  health_df = subset(health_df, Topic == "Overall Health" & Response %in% c("Poor", "Fair", "Good", "Very Good", "Excellent")) |> 
+colnames(health_df) = c("Year", "Location_Abbreviation", "Location_Description", "Class", "Topic", "Health_Question", "Response", "Sample_Size", "Data_value", "Confidence_Limit_Low", "Confidence_Limit_High", "Display_Order", "Data_Value_Unit", "Data_Value_Type", "Data_Value_Footnote_Symbol", "Data_Value_Footnote", "Data_Source", "Class_ID", "Topic_ID", "Location_ID", "Question_ID", "RESP_ID", "Geographic_Location")
 
-  mutate(Response = factor(Response)) |>
-  mutate(Response = fct_relevel(Response, c("Poor", "Fair", "Good", "Very Good", "Excellent")))
-  
+health_df = subset(health_df, Topic == "Overall Health" & Response %in% c("Poor", "Fair", "Good", "Very good", "Excellent"))
+
+filtered_health_df = health_df |>
+  filter(Topic == "Overall Health") |> 
+  filter(Response %in% c("Poor", "Fair", "Good", "Very good", "Excellent")) |> 
+  mutate(Response = as.factor(Response), Response = ordered(Response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent")), ordered = TRUE) 
+
 Year_2002 = subset(health_df, Year == 2002) |> 
   group_by(Location_Abbreviation) |> 
   summarise(n_occurrences = n()) |> 
@@ -121,5 +124,35 @@ Merged_data = Merged_data |>
     color = "Gender"
   ) 
 ```
+Comment: 
+In the group of being less than high school, males and females tend to have similar scatterplot and trendline. But males have lower activity than female with education of being high school equivalent. But their rate of decrease (slope) are close. For those whose education is more than high school, females are still higher than males, and their rate of decrease are still similar. One important obervation is that across three groups, the slope is less steap, which means people with high education tend to have lower rate of activity decrease. 
+
+
+```{r}
+
+Longer_merged_data = Merged_data |> 
+  pivot_longer(cols = starts_with("min"), names_to = "minute", values_to = "acceleration")
+
+Average_data = Longer_merged_data |>
+  group_by(education, sex, minute) |>
+  summarise(mean_acceleration = mean(acceleration, na.rm = TRUE), .groups = 'drop')
+
+ggplot(Average_data, aes(x = as.numeric(sub("min", "", minute)), y = mean_acceleration, color = sex)) +
+  geom_line() +
+  geom_smooth(method = "loess", span = 0.2) +
+  facet_wrap(~ education, ncol = 1) +
+  labs(
+    title = "24-hour Activity Time Courses at Different Education Levels",
+    x = "Time of Day (Minutes)",
+    y = "Average Accelerometer Reading",
+    color = "Sex"
+  ) +
+  scale_x_continuous(limits = c(0, 1440), breaks = seq(0, 1440, 240)) +
+  theme_minimal()
+
+
+```
+Comment: 
+Similarly, we can see males and females are similar in the group of "less than high school". Males have slightly lower average accelerometer reading in the group of "high school equivalent". However, there is obvious difference between males and females with highest education levels. The difference is more significant in the middle parts (360 to 1200) of minutes but less in two sides. It also supports the comments made above.
 
 
